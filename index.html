@@ -630,8 +630,7 @@ footer {
   </div>
 </footer>
 
-<!-- EMAILJS SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- FORMSPREE FORM HANDLING -->
 
 <!-- CONTACT MODAL -->
 <div class="modal-overlay" id="contactModal">
@@ -640,27 +639,29 @@ footer {
     <div class="modal-title">Get in Touch</div>
     <p class="modal-sub">Fill the form below — I'll get back to you soon! 🚀</p>
 
-    <div class="form-group">
-      <label>Your Name</label>
-      <input type="text" id="cName" placeholder="e.g. John Doe"/>
-    </div>
-    <div class="form-group">
-      <label>Your Email</label>
-      <input type="email" id="cEmail" placeholder="e.g. john@email.com"/>
-    </div>
-    <div class="form-group">
-      <label>Message</label>
-      <textarea id="cMsg" rows="4" placeholder="What would you like to say?"></textarea>
-    </div>
+    <form id="contactForm" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" name="name" id="cName" placeholder="e.g. John Doe" required/>
+      </div>
+      <div class="form-group">
+        <label>Your Email</label>
+        <input type="email" name="email" id="cEmail" placeholder="e.g. john@email.com" required/>
+      </div>
+      <div class="form-group">
+        <label>Message</label>
+        <textarea name="message" id="cMsg" rows="4" placeholder="What would you like to say?" required></textarea>
+      </div>
 
-    <div id="formError" style="display:none;color:#f87171;font-size:0.8rem;margin-bottom:0.8rem;"></div>
+      <div id="formError" style="display:none;color:#f87171;font-size:0.8rem;margin-bottom:0.8rem;"></div>
 
-    <div class="form-footer">
-      <p class="form-alt">Or email: <a href="mailto:ajayrangu8@gmail.com">ajayrangu8@gmail.com</a></p>
-      <button class="btn btn-solid" id="sendBtn" onclick="sendMessage()">
-        <span id="btnText">Send Message</span>
-      </button>
-    </div>
+      <div class="form-footer">
+        <p class="form-alt">Or email: <a href="mailto:ajayrangu8@gmail.com">ajayrangu8@gmail.com</a></p>
+        <button type="submit" class="btn btn-solid" id="sendBtn">
+          <span id="btnText">Send Message</span>
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -668,19 +669,14 @@ footer {
 <div class="toast" id="toast">✅ Message sent! I'll reply soon.</div>
 
 <script>
-  /* ── EmailJS init ──
+  /* ── Formspree Setup ──
      To activate real sending:
-     1. Go to https://www.emailjs.com and create a free account
-     2. Add a Gmail service → copy your Service ID
-     3. Create an Email Template → copy your Template ID
-     4. Copy your Public Key from Account > API Keys
-     5. Replace the three values below with yours
+     1. Go to https://formspree.io and create a free account
+     2. Create a new form
+     3. Copy your form endpoint URL (looks like https://formspree.io/f/xxxxx)
+     4. Replace 'YOUR_FORM_ID' in the form action with your actual form ID
   */
-  const EJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';   // e.g. 'abc123XYZ'
-  const EJS_SERVICE_ID  = 'YOUR_SERVICE_ID';   // e.g. 'service_xxxxxx'
-  const EJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';  // e.g. 'template_xxxxxx'
 
-  emailjs.init({ publicKey: EJS_PUBLIC_KEY });
 
   function openModal()  { document.getElementById('contactModal').classList.add('open'); }
   function closeModal() { document.getElementById('contactModal').classList.remove('open'); }
@@ -708,58 +704,40 @@ footer {
     }, 3500);
   }
 
-  async function sendMessage() {
-    hideError();
-    const name  = document.getElementById('cName').value.trim();
-    const email = document.getElementById('cEmail').value.trim();
-    const msg   = document.getElementById('cMsg').value.trim();
-
-    // Validation
-    if (!name)  { showError('⚠ Please enter your name.'); return; }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('⚠ Please enter a valid email address.'); return; }
-    if (!msg)   { showError('⚠ Please write a message.'); return; }
-
-    const btn     = document.getElementById('sendBtn');
+  // Handle form submission
+  document.getElementById('contactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('sendBtn');
     const btnText = document.getElementById('btnText');
-    btn.disabled  = true;
+    btn.disabled = true;
     btnText.textContent = 'Sending…';
 
-    // If EmailJS keys are configured, send via EmailJS
-    if (EJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
-      try {
-        await emailjs.send(EJS_SERVICE_ID, EJS_TEMPLATE_ID, {
-          from_name:    name,
-          from_email:   email,
-          message:      msg,
-          to_email:     'ajayrangu8@gmail.com'
-        });
-        closeModal();
-        showToast();
-        document.getElementById('cName').value  = '';
-        document.getElementById('cEmail').value = '';
-        document.getElementById('cMsg').value   = '';
-      } catch (err) {
-        showError('⚠ Failed to send. Please email directly: ajayrangu8@gmail.com');
+    // Submit the form
+    fetch(this.action, {
+      method: 'POST',
+      body: new FormData(this),
+      headers: {
+        'Accept': 'application/json'
       }
-    } else {
-      // Fallback: copy details to clipboard and show instructions
-      const details = `Name: ${name}\nEmail: ${email}\nMessage: ${msg}`;
-      try {
-        await navigator.clipboard.writeText(details);
+    })
+    .then(response => {
+      if (response.ok) {
         closeModal();
-        showToast('📋 Details copied! Email ajayrangu8@gmail.com');
-      } catch {
-        closeModal();
-        alert(`Please email ajayrangu8@gmail.com with:\n\n${details}`);
+        showToast('✅ Message sent! I\'ll reply soon.');
+        this.reset();
+      } else {
+        throw new Error('Network response was not ok.');
       }
-      document.getElementById('cName').value  = '';
-      document.getElementById('cEmail').value = '';
-      document.getElementById('cMsg').value   = '';
-    }
-
-    btn.disabled = false;
-    btnText.textContent = 'Send Message';
-  }
+    })
+    .catch(error => {
+      showError('⚠ Failed to send. Please email directly: ajayrangu8@gmail.com');
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btnText.textContent = 'Send Message';
+    });
+  });
 
   // Scroll reveal
   const els = document.querySelectorAll('.reveal');
